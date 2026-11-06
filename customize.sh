@@ -77,9 +77,16 @@ tz_scan_files() {
 
 tz_setup_file() {
     ui_print "Generating timezone setup files ... "
-    (cat ${TZ_FILES} | grep '^Link' | awk '{print $1" "$2" "$3}'
-    (cat ${TZ_FILES} | grep '^Zone' | awk '{print $2}'
-    cat ${TZ_FILES} | grep '^Link' | awk '{print $3}') | LC_ALL=C sort) > ${TZ_SETUP}
+    # Since we do not compile the "backward" file (in tz_compile()), we must
+    # also exclude its time zone.
+    TZ_FILES_NO_BACKWARD=$(find ${TZ_FILES} ! -name backward)
+    {
+        awk '/^Link/ { print $1 " " $2 " " $3 }' ${TZ_FILES}
+        {
+            awk '/^Zone/ { print $2 }' ${TZ_FILES_NO_BACKWARD}
+            awk '/^Link/ { print $3 }' ${TZ_FILES}
+        } | LC_ALL=C sort
+    } | tee "${TZ_SETUP}"
     [ -e "${TZ_SETUP}" ] || abort "Error: failed to setup timezone files"
 }
 
